@@ -1,0 +1,22 @@
+# robots.txt for https://www.sumansi.in
+
+User-agent: *
+# Disallow common private or admin routes
+Disallow: /admin/
+Disallow: /backend/
+Disallow: /api/
+Disallow: /checkout/
+Disallow: /cart/
+Disallow: /private/
+
+# Allow public static assets (adjust if your build outputs differ)
+Allow: /static/
+Allow: /assets/
+Allow: /public/
+
+# Gentle crawl delay (optional)
+Crawl-delay: 10
+
+# Sitemap and host (replace with your real domain)
+Sitemap: https://www.sumansi.in/sitemap.xml
+Host: https://www.sumansi.in
