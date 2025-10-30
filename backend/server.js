@@ -34,22 +34,12 @@ const upload = multer({ storage });
 app.use(express.json());
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URL, // optional, set in env if available
-      "http://www.sumansi.in",
-      "https://www.sumansi.in",
-      "http://sumansi.in",
-      "https://sumansi.in",
-      "https://api.sumansi.in",
-      "https://www.api.sumansi.in",
-      "http://api.sumansi.in",
-      "http://www.api.sumansi.in",
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-    ].filter(Boolean),
-    credentials: true,
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(cookieParser());
 
 // Connect DB
