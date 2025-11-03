@@ -31,8 +31,49 @@ import {
   ArrowForwardIos,
   CloudUpload,
 } from "@mui/icons-material";
-import colors from "../colors"; // Your custom color palette
+import colors from "../colors";
 import { API_BASE_URL, ADMIN_API_KEY } from "../config";
+
+/* --------------------------------------------------------------- */
+/*  Fixed dimensions & WebP quality                               */
+/* --------------------------------------------------------------- */
+const FIXED_WIDTH = 1600;      // change if you need another width
+const FIXED_HEIGHT = 600;      // change if you need another height
+const WEBP_QUALITY = 80;       // 0-100 (80 = good quality + compression)
+
+/* --------------------------------------------------------------- */
+/*  Convert file → WebP (fixed size) → Base64 data URL            */
+/* --------------------------------------------------------------- */
+const convertToWebPBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = FIXED_WIDTH;
+        canvas.height = FIXED_HEIGHT;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, FIXED_WIDTH, FIXED_HEIGHT);
+
+        canvas.toBlob(
+          (blob) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result); // data:image/webp;base64,...
+            fr.onerror = reject;
+            fr.readAsDataURL(blob);
+          },
+          "image/webp",
+          WEBP_QUALITY / 100
+        );
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 const BannerList = () => {
   const [banners, setBanners] = useState([]);
@@ -49,22 +90,21 @@ const BannerList = () => {
   const [bannersFetched, setBannersFetched] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_KEY = ADMIN_API_KEY; // Your provided API key
+  const API_KEY = ADMIN_API_KEY;
 
+  /* ----------------------- FETCH BANNERS ----------------------- */
   const fetchBanners = async () => {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/banner/banners`, {
         headers: { "x-api-key": API_KEY },
       });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch banners: ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`Failed: ${res.statusText}`);
       const data = await res.json();
       setBanners(data);
       setBannersFetched(true);
     } catch (err) {
-      setError("Failed to fetch banners. Please try again.");
+      setError("Failed to fetch banners.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -72,10 +112,10 @@ const BannerList = () => {
   };
 
   useEffect(() => {
-    fetchBanners(); // Fetch banners on mount
+    fetchBanners();
   }, []);
 
-  // Auto-slide for active banners
+  /* ----------------------- AUTO SLIDE ----------------------- */
   useEffect(() => {
     const active = banners.filter((b) => b.isActive);
     if (active.length > 1) {
@@ -86,49 +126,42 @@ const BannerList = () => {
     }
   }, [banners]);
 
+  /* ----------------------- IMAGE PROCESS & UPLOAD ----------------------- */
   const handleImageUpload = async (file) => {
     if (!file) return;
-    // Validate file
+
     const validTypes = ["image/jpeg", "image/png", "image/gif"];
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+
     if (!validTypes.includes(file.type)) {
-      setError("Please upload a valid image (JPEG, PNG, or GIF).");
+      setError("Only JPEG, PNG or GIF allowed.");
       return;
     }
     if (file.size > maxSize) {
-      setError("Image size must be less than 5MB.");
+      setError("Image must be < 5 MB.");
       return;
     }
 
     setUploading(true);
-    const uploadData = new FormData();
-    uploadData.append("image", file);
-
     try {
-      const res = await fetch(`${API_BASE_URL}/upload`, {
-        method: "POST",
-        headers: { "x-api-key": API_KEY },
-        body: uploadData,
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setFormData((prev) => ({ ...prev, image: json.url }));
-      } else {
-        setError(json.error || "Failed to upload image.");
-      }
+      const base64 = await convertToWebPBase64(file);
+      setFormData((prev) => ({ ...prev, image: base64 }));
     } catch (err) {
-      setError("Failed to upload image. Please try again.");
+      console.error(err);
+      setError("Failed to process image.");
     } finally {
       setUploading(false);
     }
   };
 
+  /* ----------------------- FORM SUBMIT ----------------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.order < 0) {
-      setError("Order must be a non-negative number.");
+      setError("Order must be >= 0.");
       return;
     }
+
     setLoading(true);
     const method = editingBanner ? "PUT" : "POST";
     const url = editingBanner
@@ -147,43 +180,34 @@ const BannerList = () => {
       const json = await res.json();
       if (res.ok) {
         fetchBanners();
-        setShowForm(false);
-        setEditingBanner(null);
-        setFormData({ image: "", isActive: true, order: 0 });
+        resetForm();
       } else {
         setError(json.error || "Failed to save banner.");
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError("Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({
-      image: "",
-      isActive: true,
-      order: 0,
-    });
+    setFormData({ image: "", isActive: true, order: 0 });
     setEditingBanner(null);
     setShowForm(false);
   };
 
+  /* ----------------------- TOGGLE / DELETE ----------------------- */
   const toggleStatus = async (id) => {
     try {
       const res = await fetch(`${API_BASE_URL}/banner/admin/toggle/${id}`, {
         method: "PATCH",
         headers: { "x-api-key": API_KEY },
       });
-      if (res.ok) {
-        fetchBanners();
-      } else {
-        throw new Error("Failed to toggle status");
-      }
-    } catch (err) {
-      setError("Failed to toggle status. Please try again.");
-      console.error(err);
+      if (res.ok) fetchBanners();
+      else throw new Error();
+    } catch {
+      setError("Failed to toggle status.");
     }
   };
 
@@ -194,18 +218,17 @@ const BannerList = () => {
         method: "DELETE",
         headers: { "x-api-key": API_KEY },
       });
-      if (res.ok) {
-        fetchBanners();
-      } else {
-        throw new Error("Failed to delete banner");
-      }
-    } catch (err) {
-      setError("Failed to delete banner. Please try again.");
+      if (res.ok) fetchBanners();
+      else throw new Error();
+    } catch {
+      setError("Failed to delete banner.");
     }
   };
 
+  /* ----------------------- UI ----------------------- */
   return (
     <Box sx={{ p: 4, backgroundColor: colors.background }}>
+      {/* Header */}
       <Box display="flex" justifyContent="space-between" mb={3}>
         <Typography variant="h4">Banner Management</Typography>
         <Button
@@ -218,7 +241,7 @@ const BannerList = () => {
         </Button>
       </Box>
 
-      {/* Loading State */}
+      {/* Loading */}
       {loading && !bannersFetched && (
         <Box textAlign="center" py={5}>
           <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 3, mb: 2 }} />
@@ -227,18 +250,18 @@ const BannerList = () => {
         </Box>
       )}
 
-      {/* No Banners Message */}
+      {/* No banners */}
       {bannersFetched && banners.length === 0 && (
         <Box textAlign="center" py={5}>
           <Typography variant="h6" color="textSecondary">
-            No banners found. Add a banner to get started!
+            No banners found. Add one to start!
           </Typography>
         </Box>
       )}
 
-      {/* Slider */}
+      {/* Slider (active banners) */}
       {bannersFetched && banners.filter((b) => b.isActive).length > 0 && (
-        <Box position="relative" height={300} mb={5}>
+        <Box position="relative" height={300} mb={5} overflow="hidden">
           {banners
             .filter((b) => b.isActive)
             .map((banner, i) => (
@@ -286,7 +309,7 @@ const BannerList = () => {
         </Box>
       )}
 
-      {/* Banner List */}
+      {/* Banner Grid */}
       {bannersFetched && banners.length > 0 && (
         <Grid container spacing={2}>
           {banners.map((banner) => (
@@ -331,7 +354,7 @@ const BannerList = () => {
         </Grid>
       )}
 
-      {/* Banner Form Dialog */}
+      {/* Form Dialog */}
       <Dialog open={showForm} onClose={resetForm} maxWidth="sm" fullWidth>
         <DialogTitle>{editingBanner ? "Edit Banner" : "Add Banner"}</DialogTitle>
         <DialogContent>
@@ -361,6 +384,8 @@ const BannerList = () => {
               margin="normal"
               inputProps={{ min: 0 }}
             />
+
+            {/* Image preview / upload */}
             <Box mt={2}>
               {formData.image ? (
                 <Box>

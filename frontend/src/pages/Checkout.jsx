@@ -634,7 +634,9 @@ const Checkout = () => {
         { label: "Shipping", icon: <LocalShippingIcon /> },
         { label: "Payment", icon: <PaymentIcon /> },
       ];
-
+useEffect(() => {
+  window.scrollTo(0, 0);
+}, []);
   // Save form data to localStorage
   useEffect(() => {
     if (isInitialized) {

@@ -11,12 +11,10 @@ import {
   Card,
   CardContent,
   InputAdornment,
-  Alert,
   Fade,
   Tooltip,
   CircularProgress,
   Snackbar,
-  Skeleton,
 } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import {
@@ -125,16 +123,87 @@ const AddProduct = () => {
     }
   };
 
+  // Add helper to convert any image File to WebP Blob, with optional max dimension and quality
+  const convertFileToWebP = (file, quality = 0.8, maxWidth = 1600, maxHeight = 1600) => {
+    return new Promise((resolve, reject) => {
+      const fallback = () => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("File read error"));
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onerror = () => reject(new Error("Image load error"));
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            const scale = Math.min(1, maxWidth / width, maxHeight / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return reject(new Error("Conversion failed"));
+                resolve(blob);
+              },
+              "image/webp",
+              quality
+            );
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+
+      // Prefer modern createImageBitmap for performance
+      if (typeof createImageBitmap !== "undefined") {
+        createImageBitmap(file)
+          .then((imageBitmap) => {
+            let width = imageBitmap.width;
+            let height = imageBitmap.height;
+            const scale = Math.min(1, maxWidth / width, maxHeight / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(imageBitmap, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) return fallback(); // fallback if blob creation fails
+                resolve(blob);
+              },
+              "image/webp",
+              quality
+            );
+          })
+          .catch(() => {
+            // fallback for any errors
+            fallback();
+          });
+      } else {
+        fallback();
+      }
+    });
+  };
+
+  // Replace uploadImage to convert file to webp before sending to backend
   const uploadImage = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
+    // convert to webp blob (keeps quality and reduces size)
+    const webpBlob = await convertFileToWebP(file, 0.8);
+    const fd = new FormData();
+    const baseName = (file && file.name) ? file.name.replace(/\.[^/.]+$/, "") : "image";
+    fd.append("image", webpBlob, `${baseName}.webp`);
     const res = await fetch(`${API_BASE_URL}/upload`, {
       method: "POST",
-      body: formData,
+      body: fd,
     });
     if (!res.ok) throw new Error("Image upload failed");
     const data = await res.json();
-    return data.url; // Now a Base64 string
+    return data.url; // expected to be a URL or base64 returned by backend
   };
 
   const handleMainImageChange = async (e) => {

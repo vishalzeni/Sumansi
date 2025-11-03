@@ -1,8 +1,9 @@
 // filename: bannerController.js
 const Banner = require("../models/Banner");
-const cloudinary = require("cloudinary").v2; // Import cloudinary
 
-// Get all banners
+// ------------------------------------------------------------------
+// GET ALL BANNERS
+// ------------------------------------------------------------------
 exports.getAllBanners = async (req, res) => {
   try {
     const banners = await Banner.find().sort({ order: 1, createdAt: -1 });
@@ -13,7 +14,9 @@ exports.getAllBanners = async (req, res) => {
   }
 };
 
-// Get active banners only (for frontend display)
+// ------------------------------------------------------------------
+// GET ACTIVE BANNERS (public)
+// ------------------------------------------------------------------
 exports.getActiveBanners = async (req, res) => {
   try {
     const banners = await Banner.find({ isActive: true }).sort({ order: 1, createdAt: -1 });
@@ -24,92 +27,80 @@ exports.getActiveBanners = async (req, res) => {
   }
 };
 
-// Create new banner
+// ------------------------------------------------------------------
+// CREATE BANNER – receives Base64 WebP string
+// ------------------------------------------------------------------
 exports.createBanner = async (req, res) => {
   try {
     const { image, isActive = true, order = 0 } = req.body;
 
-    if (!image) {
-      return res.status(400).json({ error: "Image URL is required" });
+    if (!image || !image.startsWith("data:image/webp;base64,")) {
+      return res.status(400).json({ error: "Valid WebP Base64 image required" });
     }
 
-    const banner = new Banner({
-      image, // Now expects a Cloudinary URL
-      isActive,
-      order,
-    });
-
+    const banner = new Banner({ image, isActive, order });
     await banner.save();
-    res.status(201).json({ message: "Banner created successfully", banner });
+
+    res.status(201).json({ message: "Banner created", banner });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to create banner" });
   }
 };
 
-// Update banner
+// ------------------------------------------------------------------
+// UPDATE BANNER
+// ------------------------------------------------------------------
 exports.updateBanner = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    if (updateData.image && !updateData.image.startsWith("http")) {
-      return res.status(400).json({ error: "Invalid image URL" });
+    if (updateData.image && !updateData.image.startsWith("data:image/webp;base64,")) {
+      return res.status(400).json({ error: "Invalid WebP Base64 image" });
     }
 
     const banner = await Banner.findByIdAndUpdate(id, updateData, { new: true });
-    
-    if (!banner) {
-      return res.status(404).json({ error: "Banner not found" });
-    }
+    if (!banner) return res.status(404).json({ error: "Banner not found" });
 
-    res.json({ message: "Banner updated successfully", banner });
+    res.json({ message: "Banner updated", banner });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update banner" });
   }
 };
 
-// Delete banner
+// ------------------------------------------------------------------
+// DELETE BANNER – no Cloudinary cleanup needed
+// ------------------------------------------------------------------
 exports.deleteBanner = async (req, res) => {
   try {
     const { id } = req.params;
-
     const banner = await Banner.findByIdAndDelete(id);
-    
-    if (!banner) {
-      return res.status(404).json({ error: "Banner not found" });
-    }
+    if (!banner) return res.status(404).json({ error: "Banner not found" });
 
-    // Optionally: Delete image from Cloudinary
-    if (banner.image) {
-      const publicId = banner.image.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(`sumansi-banners/${publicId}`);
-    }
-
-    res.json({ message: "Banner deleted successfully" });
+    res.json({ message: "Banner deleted" });
   } catch (err) {
-    console.error("[Delete Banner] Error:", err);
+    console.error(err);
     res.status(500).json({ error: "Failed to delete banner" });
   }
 };
 
-// Toggle banner active status
+// ------------------------------------------------------------------
+// TOGGLE ACTIVE STATUS
+// ------------------------------------------------------------------
 exports.toggleBannerStatus = async (req, res) => {
   try {
     const { id } = req.params;
-
     const banner = await Banner.findById(id);
-    if (!banner) {
-      return res.status(404).json({ error: "Banner not found" });
-    }
+    if (!banner) return res.status(404).json({ error: "Banner not found" });
 
     banner.isActive = !banner.isActive;
     await banner.save();
 
-    res.json({ message: "Banner status updated", banner });
+    res.json({ message: "Status toggled", banner });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to toggle banner status" });
+    res.status(500).json({ error: "Failed to toggle status" });
   }
 };

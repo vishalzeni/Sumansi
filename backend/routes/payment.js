@@ -134,8 +134,8 @@ router.post("/verify-payment", paymentLimiter, validatePayment, async (req, res)
       status: "completed",
       items: orderDetails.items.map((item) => ({
         productId: item.productId,
-        name: item.product?.name || "Unknown Product",
-        price: item.product?.price || 0,
+        name: item.product.name || "Unknown Product",
+        price: item.product.price || 0,
         qty: item.qty || 1,
         size: item.size || "N/A",
       })),
@@ -157,13 +157,13 @@ router.post("/verify-payment", paymentLimiter, validatePayment, async (req, res)
     const itemsHtml = order.items
       .map(
         (item) =>
-          `<li><strong>${item.name}</strong> (Qty: ${item.qty}, Size: ${item.size}) - ₹${item.price}</li>`
+          `<li><strong>${item.name}</strong> (Qty: ${item.qty}, Size: ${item.size}) - ₹${item.price}, Color: ${item.color || "N/A"}</li>`
       )
       .join("");
 
     const mailOptions = {
-      from: `"Your Store" <${process.env.SMTP_USER}>`,
-      to: [orderDetails.shippingAddress.email, "vishalzenith47@gmail.com"], // Notify customer and admin
+      from: `"Sumansi" <${process.env.SMTP_USER}>`,
+      to: [orderDetails.shippingAddress.email, "siyat211@gmail.com"], // Notify customer and admin
       subject: `Order Confirmation: ${razorpay_order_id}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

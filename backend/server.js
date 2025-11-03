@@ -32,13 +32,32 @@ const upload = multer({ storage });
 
 // Middleware
 app.use(express.json());
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://www.sumansi.in",
+];
+
 app.use(
   cors({
-    origin: "*",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "x-api-key",
+      "X-API-KEY",
+    ],
   })
 );
+
 
 app.use(cookieParser());
 

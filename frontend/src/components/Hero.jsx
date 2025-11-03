@@ -1,218 +1,217 @@
+// filename: Hero.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useSwipeable } from "react-swipeable";
-import { Box, useMediaQuery, useTheme, CircularProgress, Typography, Snackbar, Alert, Skeleton } from "@mui/material";
+import { Box, Typography, Snackbar, Alert } from "@mui/material";
 import colors from "../colors";
 import { API_BASE_URL, ADMIN_API_KEY } from "../config";
 
-const Hero = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const [banners, setBanners] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const extendedBanners = banners.length
-    ? [banners[banners.length - 1], ...banners, banners[0]]
-    : [];
-  const [index, setIndex] = useState(1); // Start at first real slide
-  const sliderRef = useRef(null);
-  const timerRef = useRef(null);
+/* ------------------- SHIMMER ------------------- */
+const Shimmer = () => (
+  <Box
+    sx={{
+      width: "100%",
+      height: "100%",
+      background: "linear-gradient(90deg, #f0f0f0 25%, #e5e5e5 50%, #f0f0f0 75%)",
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.8s infinite",
+      "@keyframes shimmer": {
+        "0%": { backgroundPosition: "200% 0" },
+        "100%": { backgroundPosition: "-200% 0" },
+      },
+    }}
+  />
+);
 
+/* ------------------- HERO COMPONENT ------------------- */
+const Hero = () => {
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const intervalRef = useRef(null);
   const API_KEY = ADMIN_API_KEY;
 
-  // Fetch banners directly from API
-  const fetchBanners = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/banner/active`, {
-        headers: { "x-api-key": API_KEY },
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch banners: ${res.statusText}`);
-      }
-      const data = await res.json();
-      setBanners(data);
-    } catch (err) {
-      setError("Failed to load banners. Please try again.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch banners on mount
+  /* ------------------- FETCH BANNERS ------------------- */
   useEffect(() => {
-    fetchBanners();
-  }, []);
-
-  // Handle auto-slide
-  const resetTimer = () => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setIndex((prev) => prev + 1);
-    }, 4000);
-  };
-
-  useEffect(() => {
-    if (banners.length > 0) {
-      resetTimer();
-      return () => clearInterval(timerRef.current);
-    }
-  }, [banners]);
-
-  // Smooth infinite loop handler
-  useEffect(() => {
-    const total = extendedBanners.length;
-    const slider = sliderRef.current;
-
-    if (!slider || !total) return;
-
-    slider.style.transition = "transform 0.6s ease";
-    slider.style.transform = `translateX(-${index * (100 / total)}%)`;
-
-    const handleTransitionEnd = () => {
-      if (index === 0) {
-        slider.style.transition = "none";
-        setIndex(banners.length);
-        slider.style.transform = `translateX(-${banners.length * (100 / total)}%)`;
-      } else if (index === total - 1) {
-        slider.style.transition = "none";
-        setIndex(1);
-        slider.style.transform = `translateX(-${100 / total}%)`;
+    const fetchBanners = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE_URL}/banner/active`, {
+          headers: { "x-api-key": API_KEY },
+        });
+        if (!res.ok) throw new Error("Failed to load banners");
+        const data = await res.json();
+        setBanners(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
+    fetchBanners();
+  }, [API_KEY]);
 
-    slider.addEventListener("transitionend", handleTransitionEnd);
-    return () => slider.removeEventListener("transitionend", handleTransitionEnd);
-  }, [index, extendedBanners.length]);
+  /* ------------------- AUTO SLIDE ------------------- */
+  useEffect(() => {
+    if (!banners.length || loading) return;
 
-  // Swipe support
-  const swipeHandlers = useSwipeable({
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % banners.length);
+    }, 4000);
+
+    return () => clearInterval(intervalRef.current);
+  }, [banners.length, loading]);
+
+  /* ------------------- SWIPE ------------------- */
+  const handlers = useSwipeable({
     onSwipedLeft: () => {
-      setIndex((prev) => prev + 1);
+      setCurrentIndex((prev) => (prev + 1) % banners.length);
       resetTimer();
     },
     onSwipedRight: () => {
-      setIndex((prev) => prev - 1);
+      setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
       resetTimer();
     },
     trackMouse: true,
   });
 
-  // Loading state
+  const resetTimer = () => {
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % banners.length);
+    }, 4000);
+  };
+
+  /* ------------------- RESPONSIVE HEIGHT (16:9) ------------------- */
+  const sliderHeight = {
+    xs: "56.25vw",   // 16:9 → height = width * 0.5625
+    sm: "56.25vw",
+    md: 400,
+    lg: 500,
+  };
+
+  /* ------------------- LOADING ------------------- */
   if (loading) {
     return (
       <Box
         sx={{
           width: "100%",
-          height: isMobile ? "300px" : "400px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.background,
+          height: sliderHeight,
+          overflow: "hidden",
+          position: "relative",
+          boxShadow: 3,
         }}
       >
-        <Skeleton variant="rectangular" width="80%" height={isMobile ? 300 : 400} sx={{ borderRadius: 3, mr: 2 }} />
-        <CircularProgress />
-        <Typography ml={2}>Loading banners...</Typography>
+        <Shimmer />
       </Box>
     );
   }
 
-  // No banners state
+  /* ------------------- NO BANNERS ------------------- */
   if (!banners.length) {
     return (
       <Box
         sx={{
           width: "100%",
-          height: isMobile ? "300px" : "400px",
+          height: sliderHeight,
+          backgroundColor: colors.cardBg,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: colors.background,
+          p: 3,
+          boxShadow: 3,
         }}
       >
-        <Typography variant="h6" color="textSecondary">
-          No active banners available.
+        <Typography variant="h6" color="text.secondary" textAlign="center">
+          No active banners
         </Typography>
       </Box>
     );
   }
 
+  /* ------------------- MAIN SLIDER ------------------- */
   return (
     <Box
-      {...swipeHandlers}
+      {...handlers}
       sx={{
         width: "100%",
-        height: {
-          sm: "calc(100vh - 64px)",
-          md: "calc(100vh - 72px)",
-        },
-        minHeight: isMobile ? "300px" : "400px",
+        height: sliderHeight,
         overflow: "hidden",
         position: "relative",
+        boxShadow: 3,
+        userSelect: "none",
       }}
     >
-      {/* Slide container */}
+      {/* Slides */}
       <Box
-        ref={sliderRef}
         sx={{
           display: "flex",
-          width: `${extendedBanners.length * 100}%`,
+          width: "100%",
           height: "100%",
+          transform: `translateX(-${currentIndex * 100}%)`,
+          transition: "transform 0.6s ease",
         }}
       >
-        {extendedBanners.map((banner, i) => (
+        {banners.map((banner) => (
           <Box
-            key={banner._id ? `${banner._id}-${i}` : i} // Use _id for unique key
+            key={banner._id}
             sx={{
-              width: `${100 / extendedBanners.length}%`,
+              minWidth: "100%",
               height: "100%",
               backgroundImage: `url(${banner.image})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
+              flexShrink: 0,
             }}
           />
         ))}
       </Box>
 
-      {/* Dot Indicators */}
+      {/* Dots */}
       <Box
         sx={{
           position: "absolute",
-          bottom: { xs: 10, sm: 20 },
+          bottom: { xs: 12, sm: 16, md: 20 },
           left: "50%",
           transform: "translateX(-50%)",
           display: "flex",
-          gap: 1.5,
+          gap: 1.2,
+          zIndex: 10,
         }}
       >
         {banners.map((_, i) => (
           <Box
-            key={banners[i]._id}
+            key={i}
             onClick={() => {
-              setIndex(i + 1);
+              setCurrentIndex(i);
               resetTimer();
             }}
             sx={{
-              width: 10,
-              height: 10,
+              width: { xs: 8, sm: 10 },
+              height: { xs: 8, sm: 10 },
               borderRadius: "50%",
-              backgroundColor: index === i + 1 ? colors.primary : "#ccc",
-              transition: "all 0.3s ease",
+              backgroundColor: currentIndex === i ? colors.primary : "rgba(255,255,255,0.6)",
               cursor: "pointer",
+              transition: "all 0.3s",
+              "&:hover": {
+                backgroundColor: colors.primary,
+                transform: "scale(1.3)",
+              },
             }}
           />
         ))}
       </Box>
 
-      {/* Error Snackbar */}
+      {/* Error */}
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
         onClose={() => setError(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={() => setError(null)} severity="error" sx={{ width: "100%" }}>
+        <Alert onClose={() => setError(null)} severity="error">
           {error}
         </Alert>
       </Snackbar>
