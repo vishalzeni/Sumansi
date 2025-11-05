@@ -1,3 +1,4 @@
+// Contact.jsx
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -14,100 +15,94 @@ import {
   Paper,
   Chip,
   Snackbar,
-  Skeleton,
   CircularProgress,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import colors from "../colors";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { API_BASE_URL } from "../config";
 
 // Icons
 import PhoneIcon from "@mui/icons-material/Phone";
 import EmailIcon from "@mui/icons-material/Email";
 import InstagramIcon from "@mui/icons-material/Instagram";
 import FacebookIcon from "@mui/icons-material/Facebook";
-import RoomIcon from "@mui/icons-material/Room";
 import ContactMailIcon from "@mui/icons-material/ContactMail";
 import ContactSupportIcon from "@mui/icons-material/ContactSupport";
 
 const fadeIn = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.8,
-      ease: "easeOut",
-      staggerChildren: 0.1,
-    },
-  },
+  visible: { opacity: 1, transition: { duration: 0.8, ease: "easeOut", staggerChildren: 0.1 } },
 };
 
 const slideUp = {
   hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-    },
-  },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.6, ease: "easeOut" } },
 };
 
 const Contact = () => {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
+    phone: "",
     email: "",
     message: "",
   });
   const [errors, setErrors] = useState({});
-  const [submissionStatus, setSubmissionStatus] = useState(null);
+  const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim())
-      newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Invalid email address";
-    }
-    if (!formData.message.trim()) newErrors.message = "Message is required";
-    return newErrors;
+  const validate = () => {
+    const e = {};
+    if (!formData.fullName.trim()) e.fullName = "Full name is required";
+    if (!formData.email.trim()) e.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) e.email = "Invalid email address";
+    if (!formData.phone.trim()) e.phone = "Phone number is required";
+    else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ""))) e.phone = "Enter a valid 10-digit number";
+    if (!formData.message.trim()) e.message = "Message is required";
+    return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors);
       return;
     }
 
+    setLoading(true);
+    setSubmission(null);
+    setErrors({});
+
     try {
-      setLoading(true);
-      // Simulated API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setSubmissionStatus({
-        type: "success",
-        message: "Your message has been sent successfully!",
+      const res = await fetch(`${API_BASE_URL}/email/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
-      setFormData({ firstName: "", lastName: "", email: "", message: "" });
-      setErrors({});
+      const data = await res.json();
+
+      if (data.success) {
+        setSubmission({ type: "success", msg: "Your message has been sent successfully!" });
+        setFormData({ fullName: "", phone: "", email: "", message: "" });
+      } else {
+        throw new Error(data.message ?? "Something went wrong");
+      }
+    } catch (err) {
+      setSubmission({ type: "error", msg: err.message ?? "Failed to send message. Please try again." });
+    } finally {
+      setLoading(false);
       setSnackbarOpen(true);
-    } catch (error) {
-      setSubmissionStatus({
-        type: "error",
-        message: "Failed to send message. Please try again.",
-      });
     }
-    setLoading(false);
   };
+
+  const handleChange = (field) => (e) => {
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -115,20 +110,18 @@ const Contact = () => {
   return (
     <>
       <Header />
+
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={submissionStatus?.type}
-          sx={{ width: "100%" }}
-        >
-          {submissionStatus?.message}
+        <Alert onClose={() => setSnackbarOpen(false)} severity={submission?.type} sx={{ width: "100%" }}>
+          {submission?.msg}
         </Alert>
       </Snackbar>
+
       <Box
         sx={{
           backgroundColor: colors.background,
@@ -149,23 +142,11 @@ const Contact = () => {
       >
         <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
           <motion.div initial="hidden" animate="visible" variants={fadeIn}>
-            {/* Hero Section */}
-            <Box
-              sx={{
-                textAlign: "center",
-                mb: { xs: 6, md: 8 },
-                maxWidth: 800,
-                mx: "auto",
-              }}
-            >
+            {/* Hero */}
+            <Box sx={{ textAlign: "center", mb: { xs: 6, md: 8 }, maxWidth: 800, mx: "auto" }}>
               <Chip
                 label="Contact Us"
-                icon={
-                  <ContactMailIcon
-                    sx={{ fontSize: "1.2rem" }}
-                    color={colors.primary}
-                  />
-                }
+                icon={<ContactMailIcon sx={{ fontSize: "1.2rem", color: "white" }} />}
                 sx={{
                   mb: 3,
                   px: 2,
@@ -194,36 +175,26 @@ const Contact = () => {
                 variant="h6"
                 component={motion.p}
                 variants={slideUp}
-                sx={{
-                  color: colors.textSecondary,
-                  fontSize: { xs: "1rem", md: "1.25rem" },
-                  lineHeight: 1.6,
-                }}
+                sx={{ color: colors.textSecondary, fontSize: { xs: "1rem", md: "1.25rem" }, lineHeight: 1.6 }}
               >
-                We're here to help and answer any questions you might have.
-                Reach out to us and we'll respond as soon as possible.
+                We're here to help and answer any questions you might have. Reach out to us and we'll respond as soon as possible.
               </Typography>
             </Box>
 
             {/* Contact Cards */}
-            <Grid container spacing={4} sx={{ mb: { xs: 6, md: 8 } }}>
-              <Grid item xs={12} md={4}>
+            <Grid container spacing={4} justifyContent="center" sx={{ mb: { xs: 6, md: 8 } }}>
+              <Grid item xs={12} sm={6} md={4}>
                 <motion.div variants={slideUp}>
                   <Card
                     sx={{
                       height: "100%",
                       borderRadius: 3,
                       boxShadow: `0 8px 24px ${colors.primary}10`,
-                      transition: "all 0.3s ease",
-                      "&:hover": {
-                        transform: "translateY(-5px)",
-                        boxShadow: `0 12px 28px ${colors.primary}20`,
-                      },
+                      transition: "all .3s ease",
+                      "&:hover": { transform: "translateY(-5px)", boxShadow: `0 12px 28px ${colors.primary}20` },
                     }}
                   >
-                    <CardContent
-                      sx={{ p: { xs: 3, md: 4 }, textAlign: "center" }}
-                    >
+                    <CardContent sx={{ p: { xs: 3, md: 4 }, textAlign: "center" }}>
                       <Box
                         sx={{
                           width: 72,
@@ -243,15 +214,12 @@ const Contact = () => {
                       <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
                         Call Us
                       </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{ mb: 3, color: colors.textSecondary }}
-                      >
+                      <Typography variant="body1" sx={{ mb: 3, color: colors.textSecondary }}>
                         Available Monday to Friday from 9AM to 6PM
                       </Typography>
                       <Button
                         variant="contained"
-                        href="tel:+919999999999"
+                        href="tel:+919315036994"
                         startIcon={<PhoneIcon />}
                         sx={{
                           px: 3,
@@ -259,35 +227,27 @@ const Contact = () => {
                           borderRadius: 2,
                           fontWeight: 600,
                           backgroundColor: colors.primary,
-                          "&:hover": {
-                            backgroundColor: colors.accent,
-                          },
                         }}
                       >
-                        +91 99999 99999
+                        +91 93150 36994
                       </Button>
                     </CardContent>
                   </Card>
                 </motion.div>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} md={4}>
                 <motion.div variants={slideUp} transition={{ delay: 0.1 }}>
                   <Card
                     sx={{
                       height: "100%",
                       borderRadius: 3,
                       boxShadow: `0 8px 24px ${colors.primary}10`,
-                      transition: "all 0.3s ease",
-                      "&:hover": {
-                        transform: "translateY(-5px)",
-                        boxShadow: `0 12px 28px ${colors.primary}20`,
-                      },
+                      transition: "all .3s ease",
+                      "&:hover": { transform: "translateY(-5px)", boxShadow: `0 12px 28px ${colors.primary}20` },
                     }}
                   >
-                    <CardContent
-                      sx={{ p: { xs: 3, md: 4 }, textAlign: "center" }}
-                    >
+                    <CardContent sx={{ p: { xs: 3, md: 4 }, textAlign: "center" }}>
                       <Box
                         sx={{
                           width: 72,
@@ -307,15 +267,12 @@ const Contact = () => {
                       <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
                         Email Us
                       </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{ mb: 3, color: colors.textSecondary }}
-                      >
+                      <Typography variant="body1" sx={{ mb: 3, color: colors.textSecondary }}>
                         We typically respond within 24 hours
                       </Typography>
                       <Button
                         variant="contained"
-                        href="mailto:support@yourstore.com"
+                        href="mailto:siyat211@gmail.com"
                         startIcon={<EmailIcon />}
                         sx={{
                           px: 3,
@@ -323,79 +280,10 @@ const Contact = () => {
                           borderRadius: 2,
                           fontWeight: 600,
                           backgroundColor: colors.primary,
-                          "&:hover": {
-                            backgroundColor: colors.accent,
-                          },
+                          textTransform: "lowercase",
                         }}
                       >
-                        support@yourstore.com
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </Grid>
-
-              <Grid item xs={12} md={4}>
-                <motion.div variants={slideUp} transition={{ delay: 0.2 }}>
-                  <Card
-                    sx={{
-                      height: "100%",
-                      borderRadius: 3,
-                      boxShadow: `0 8px 24px ${colors.primary}10`,
-                      transition: "all 0.3s ease",
-                      "&:hover": {
-                        transform: "translateY(-5px)",
-                        boxShadow: `0 12px 28px ${colors.primary}20`,
-                      },
-                    }}
-                  >
-                    <CardContent
-                      sx={{ p: { xs: 3, md: 4 }, textAlign: "center" }}
-                    >
-                      <Box
-                        sx={{
-                          width: 72,
-                          height: 72,
-                          borderRadius: "50%",
-                          bgcolor: `${colors.primary}20`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          mb: 3,
-                          mx: "auto",
-                          color: colors.primary,
-                        }}
-                      >
-                        <RoomIcon sx={{ fontSize: 32 }} />
-                      </Box>
-                      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-                        Visit Us
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{ mb: 3, color: colors.textSecondary }}
-                      >
-                        123 Fashion Street
-                        <br />
-                        New Delhi, India 110001
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        href="https://maps.google.com"
-                        target="_blank"
-                        startIcon={<RoomIcon />}
-                        sx={{
-                          px: 3,
-                          py: 1.5,
-                          borderRadius: 2,
-                          fontWeight: 600,
-                          backgroundColor: colors.primary,
-                          "&:hover": {
-                            backgroundColor: colors.accent,
-                          },
-                        }}
-                      >
-                        Get Directions
+                        siyat211@gmail.com
                       </Button>
                     </CardContent>
                   </Card>
@@ -403,7 +291,7 @@ const Contact = () => {
               </Grid>
             </Grid>
 
-            {/* Contact Form Section */}
+            {/* Form */}
             <Paper
               elevation={0}
               sx={{
@@ -414,14 +302,7 @@ const Contact = () => {
                 boxShadow: `0 8px 32px ${colors.primary}10`,
               }}
             >
-              <Box
-                sx={{
-                  textAlign: "center",
-                  mb: { xs: 4, md: 6 },
-                  maxWidth: 600,
-                  mx: "auto",
-                }}
-              >
+              <Box sx={{ textAlign: "center", mb: { xs: 4, md: 6 }, maxWidth: 600, mx: "auto" }}>
                 <Chip
                   label="Send Us a Message"
                   icon={<ContactSupportIcon color={colors.primary} />}
@@ -438,107 +319,106 @@ const Contact = () => {
                 <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
                   Have a Question?
                 </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{ color: colors.textSecondary }}
-                >
-                  Fill out the form below and our team will get back to you
-                  shortly.
+                <Typography variant="body1" sx={{ color: colors.textSecondary }}>
+                  Fill out the form below and our team will get back to you shortly.
                 </Typography>
               </Box>
 
-              {submissionStatus && (
-                <Alert
-                  severity={submissionStatus.type}
-                  sx={{ mb: 4, borderRadius: 2 }}
-                >
-                  {submissionStatus.message}
-                </Alert>
-              )}
-
               <Box
+                component="form"
+                onSubmit={handleSubmit}
+                noValidate
+                autoComplete="off"
                 sx={{
                   backgroundColor: "#fff",
                   p: { xs: 4, sm: 6 },
                   borderRadius: 4,
                   boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
-                  mt: 6,
                   maxWidth: 600,
                   mx: "auto",
+                  position: "relative",
                 }}
-                component="form"
-                noValidate
-                autoComplete="off"
               >
                 {loading && (
-                  <Box sx={{ mb: 4 }}>
-                    <Skeleton
-                      variant="rectangular"
-                      height={48}
-                      sx={{ borderRadius: 3, mb: 2 }}
-                    />
-                    <Skeleton
-                      variant="rectangular"
-                      height={48}
-                      sx={{ borderRadius: 3, mb: 2 }}
-                    />
-                    <Skeleton
-                      variant="rectangular"
-                      height={48}
-                      sx={{ borderRadius: 3, mb: 2 }}
-                    />
-                    <Skeleton
-                      variant="rectangular"
-                      height={120}
-                      sx={{ borderRadius: 3, mb: 2 }}
-                    />
-                    <CircularProgress sx={{ color: colors.primary, mt: 2 }} />
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      inset: 0,
+                      bgcolor: "rgba(255,255,255,0.8)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 10,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <CircularProgress sx={{ color: colors.primary, mb: 2 }} />
+                    <Typography variant="body2" color="textSecondary">
+                      Sending message...
+                    </Typography>
                   </Box>
                 )}
+
                 <Stack spacing={4}>
                   <TextField
-                    label="First Name"
-                    fullWidth
+                    label="Full Name"
+                    value={formData.fullName}
+                    onChange={handleChange("fullName")}
+                    error={!!errors.fullName}
+                    helperText={errors.fullName}
                     required
+                    fullWidth
                     variant="outlined"
-                    sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: 3 },
-                    }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                    disabled={loading}
                   />
                   <TextField
-                    label="Last Name"
-                    fullWidth
+                    label="Phone Number"
+                    value={formData.phone}
+                    onChange={handleChange("phone")}
+                    error={!!errors.phone}
+                    helperText={errors.phone}
                     required
+                    type="tel"
+                    fullWidth
                     variant="outlined"
-                    sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: 3 },
-                    }}
+                    inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                    disabled={loading}
                   />
                   <TextField
                     label="Email Address"
+                    value={formData.email}
+                    onChange={handleChange("email")}
+                    error={!!errors.email}
+                    helperText={errors.email}
+                    required
                     type="email"
                     fullWidth
-                    required
                     variant="outlined"
-                    sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: 3 },
-                    }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                    disabled={loading}
                   />
                   <TextField
                     label="Your Message"
+                    value={formData.message}
+                    onChange={handleChange("message")}
+                    error={!!errors.message}
+                    helperText={errors.message}
+                    required
                     multiline
                     rows={5}
                     fullWidth
-                    required
                     variant="outlined"
-                    sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: 3 },
-                    }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                    disabled={loading}
                   />
                   <Box textAlign="center">
                     <Button
                       type="submit"
                       variant="contained"
+                      disabled={loading}
                       sx={{
                         px: 6,
                         py: 1.5,
@@ -546,56 +426,36 @@ const Contact = () => {
                         fontSize: "1rem",
                         borderRadius: 8,
                         backgroundColor: colors.primary,
-                        transition: "all 0.3s ease",
-                        "&:hover": {
-                          backgroundColor: colors.primaryDark || "#d32f2f",
-                        },
+                        "&:hover": { backgroundColor: colors.primaryDark || "#d32f2f" },
                       }}
-                      onClick={handleSubmit}
                     >
-                      Send Message
+                      {loading ? <CircularProgress size={24} color="inherit" /> : "Send Message"}
                     </Button>
                   </Box>
                 </Stack>
-                {loading && (
-                  <Alert severity="info" sx={{ mb: 4, borderRadius: 2 }}>
-                    Sending message...
-                  </Alert>
-                )}
               </Box>
             </Paper>
 
-            {/* Social Media Section */}
-            <Box sx={{ textAlign: "center" }}>
+            {/* Social */}
+            <Box sx={{ textAlign: "center", mb: 6 }}>
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
                 Follow Us
               </Typography>
-              <Typography
-                variant="body1"
-                sx={{ color: colors.textSecondary, mb: 3 }}
-              >
+              <Typography variant="body1" sx={{ color: colors.textSecondary, mb: 3 }}>
                 Stay connected with us on social media
               </Typography>
-              <Stack
-                direction="row"
-                spacing={2}
-                justifyContent="center"
-                sx={{ mb: 6 }}
-              >
+              <Stack direction="row" spacing={2} justifyContent="center">
                 <motion.div whileHover={{ y: -3 }}>
                   <IconButton
                     component="a"
-                    href="https://instagram.com/yourstore"
+                    href="https://www.instagram.com/sumansi.in/"
                     target="_blank"
                     rel="noopener"
                     sx={{
                       color: "#E1306C",
                       backgroundColor: `${colors.primary}10`,
-                      "&:hover": {
-                        backgroundColor: `${colors.primary}20`,
-                      },
+                      "&:hover": { backgroundColor: `${colors.primary}20` },
                     }}
-                    aria-label="Instagram"
                   >
                     <InstagramIcon fontSize="large" />
                   </IconButton>
@@ -603,17 +463,14 @@ const Contact = () => {
                 <motion.div whileHover={{ y: -3 }}>
                   <IconButton
                     component="a"
-                    href="https://facebook.com/yourstore"
+                    href="https://www.facebook.com/share/1GZyRUNeUY/"
                     target="_blank"
                     rel="noopener"
                     sx={{
                       color: "#1877F2",
                       backgroundColor: `${colors.primary}10`,
-                      "&:hover": {
-                        backgroundColor: `${colors.primary}20`,
-                      },
+                      "&:hover": { backgroundColor: `${colors.primary}20` },
                     }}
-                    aria-label="Facebook"
                   >
                     <FacebookIcon fontSize="large" />
                   </IconButton>
@@ -623,6 +480,7 @@ const Contact = () => {
           </motion.div>
         </Container>
       </Box>
+
       <Footer />
     </>
   );

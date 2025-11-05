@@ -89,7 +89,9 @@ const renderStats = () => stats.map((stat, index) => (
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+                      boxShadow: "0 3px 15px rgba(0,0,0,0.05)",
+
         }}
       >
         <Avatar
@@ -114,56 +116,100 @@ const renderStats = () => stats.map((stat, index) => (
   </Grid>
 ));
 
-const renderHighlights = () => highlights.map((item, index) => (
-  <Grid item xs={12} md={4} key={index}>
-    <motion.div
-      initial="hidden"
-      whileInView="visible"
-      variants={slideUp}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1 }}
+const renderHighlights = () =>
+  highlights.map((item, index) => (
+    <Grid
+      item
+      xs={12}
+      sm={6}
+      md={4}
+      key={index}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "stretch",
+      }}
     >
-      <Card
-        sx={{
-          p: { xs: 3, md: 4 },
-          borderRadius: 3,
-          maxWidth: 250,
-          height: '100%',
-          borderLeft: `4px solid ${item.color}`,
-          boxShadow: `0 8px 24px ${colors.primary}10`,
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-5px)',
-            boxShadow: `0 12px 28px ${colors.primary}20`
-          }
-        }}
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
+        style={{ width: "100%", display: "flex", justifyContent: "center" }}
       >
-        <Box
+        <Card
           sx={{
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
-            bgcolor: `${item.color}20`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mb: 3,
-            color: item.color,
-            mx: 'auto'
+            p: { xs: 2.2, md: 3 },              // 🔹 reduced padding ~25%
+            borderRadius: 3,
+            maxWidth: 260,                      // 🔹 was 320
+            width: "100%",
+            minHeight: 245,                     // 🔹 was 300
+            border: "1px solid rgba(0,0,0,0.05)",
+            borderLeft: `3px solid ${item.color}`,
+            background: "#fff",
+            boxShadow: "0 3px 15px rgba(0,0,0,0.05)",
+            transition: "all 0.35s ease",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            "&:hover": {
+              transform: "translateY(-6px) scale(1.02)",
+              boxShadow: `0 10px 25px ${item.color}25`,
+            },
           }}
         >
-          {item.icon}
-        </Box>
-        <Typography variant="h3" sx={{ fontWeight: 700, mb: 2, color: colors.primary, fontSize: '1.5rem', textAlign: 'center' }}>
-          {item.title}
-        </Typography>
-        <Typography variant="body1" sx={{ color: colors.textSecondary, lineHeight: 1.7, textAlign: 'center' }}>
-          {item.description}
-        </Typography>
-      </Card>
-    </motion.div>
-  </Grid>
-));
+          {/* Icon */}
+          <Box
+            sx={{
+              width: 56,                         // 🔹 was 72
+              height: 56,
+              borderRadius: "50%",
+              bgcolor: `${item.color}1A`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              mb: 2,
+              color: item.color,
+              fontSize: "1.8rem",                // 🔹 slight reduction
+              boxShadow: `inset 0 0 0 2px ${item.color}30`,
+            }}
+          >
+            {item.icon}
+          </Box>
+
+          {/* Title */}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+              mb: 1.2,
+              color: colors.primary,
+              fontSize: "1.1rem",                // 🔹 was 1.3rem
+              lineHeight: 1.3,
+            }}
+          >
+            {item.title}
+          </Typography>
+
+          {/* Description */}
+          <Typography
+            variant="body2"
+            sx={{
+              color: colors.textSecondary,
+              lineHeight: 1.7,
+              px: 1,
+              fontSize: "0.9rem",                // 🔹 slightly smaller text
+            }}
+          >
+            {item.description}
+          </Typography>
+        </Card>
+      </motion.div>
+    </Grid>
+  ));
+
 
 const About = () => {
   

@@ -12,6 +12,7 @@ const wishlistRoutes = require("./routes/wishlistRoutes");
 const cartRoutes = require("./routes/cart");
 const User = require("./models/User");
 const productsRoutes = require("./routes/products"); // <-- add this import
+const emailRouter =  require('./routes/emailRoute.js');
 
 dotenv.config();
 const app = express();
@@ -72,8 +73,9 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/user", require("./routes/userRoutes"));
 app.use("/api/banner", require("./routes/bannerRoutes"));
 app.use("/api/products", productsRoutes); // <-- add this line after other app.use
-
 app.use("/api/payment", require("./routes/payment"));
+app.use('/api/email', emailRouter);
+
 
 
 app.get("/", (req, res) => {

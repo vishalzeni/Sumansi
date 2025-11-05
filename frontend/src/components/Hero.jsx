@@ -85,8 +85,7 @@ const Hero = () => {
 
   /* ------------------- RESPONSIVE HEIGHT (16:9) ------------------- */
   const sliderHeight = {
-    xs: "56.25vw",   // 16:9 → height = width * 0.5625
-    sm: "56.25vw",
+    xs: "45vw",
     md: 400,
     lg: 500,
   };
@@ -100,7 +99,6 @@ const Hero = () => {
           height: sliderHeight,
           overflow: "hidden",
           position: "relative",
-          boxShadow: 3,
         }}
       >
         <Shimmer />
@@ -120,7 +118,6 @@ const Hero = () => {
           alignItems: "center",
           justifyContent: "center",
           p: 3,
-          boxShadow: 3,
         }}
       >
         <Typography variant="h6" color="text.secondary" textAlign="center">
@@ -139,7 +136,6 @@ const Hero = () => {
         height: sliderHeight,
         overflow: "hidden",
         position: "relative",
-        boxShadow: 3,
         userSelect: "none",
       }}
     >

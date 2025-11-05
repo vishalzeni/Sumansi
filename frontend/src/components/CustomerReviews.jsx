@@ -8,7 +8,6 @@ import {
   Rating,
   useTheme,
   styled,
-  CircularProgress,
 } from "@mui/material";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -20,50 +19,56 @@ import colors from "../colors";
 const reviews = [
   {
     id: 1,
-    name: "Aarav Mehta",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=60",
+    name: "Ananya Verma",
+    avatar:
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&auto=format&fit=crop&q=60",
     review:
-      "Absolutely love the quality and style of the products. The fabric feels rich, and the stitching is top-notch. Delivery was super fast, and the packaging gave a premium unboxing experience. Will definitely be ordering again and recommending to friends!",
+      "Absolutely loved my purchase! The dress looked even better in person — soft fabric, elegant fit, and the color didn’t fade after washing. It feels like something straight out of a boutique. Definitely ordering again soon!",
     rating: 5,
     date: "2 days ago",
   },
   {
     id: 2,
-    name: "Priya Sharma",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&auto=format&fit=crop&q=60",
+    name: "Ammy Rogan",
+    avatar:
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&auto=format&fit=crop&q=60",
     review:
-      "Customer service was incredibly helpful and responsive. They guided me patiently to choose the perfect size. The fit is fantastic and feels custom-made. I'm genuinely impressed with how easy the whole shopping experience was from start to finish.",
-    rating: 4.5,
+      "The saree I bought was stunning — lightweight, flowy, and super comfortable for an all-day event. Got so many compliments at the wedding! Delivery was quick and packaging was really classy too.",
+    rating: 5,
     date: "1 week ago",
   },
   {
     id: 3,
-    name: "Rahul Singh",
-    avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=200&auto=format&fit=crop&q=60",
+    name: "Megha Nair",
+    avatar:
+      "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=200&auto=format&fit=crop&q=60",
     review:
-      "This was my third order, and once again, everything was seamless. The collection is very well-curated with fresh designs and great prices. Website is easy to navigate, and payment options are smooth. Never had a single issue so far!",
-    rating: 4,
+      "I was a little skeptical about ordering online, but the quality blew me away! The kurta set I received fits perfectly and feels so premium. The stitching and detailing are way better than what I expected for the price.",
+    rating: 4.5,
     date: "3 days ago",
   },
   {
     id: 4,
-    name: "Sneha Kapoor",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=60",
+    name: "Kritika Sen",
+    avatar:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&auto=format&fit=crop&q=60",
     review:
-      "The outfit looked exactly like the pictures, if not better. The color was vibrant, the fit was flattering, and the feel of the fabric was extremely soft on the skin. I've already bookmarked a few more items for my next purchase. Highly recommended!",
+      "Such a refreshing shopping experience! The co-ord set I got was exactly like the photos — chic, comfortable, and perfect for summer. I’ve already shared the site with my sister and friends.",
     rating: 5,
     date: "2 weeks ago",
   },
   {
     id: 5,
-    name: "Vikram Patel",
-    avatar: "https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=200&auto=format&fit=crop&q=60",
+    name: "Aishwarya Das",
+    avatar:
+      "https://images.unsplash.com/photo-1542596594-649edbc13630?w=200&auto=format&fit=crop&q=60",
     review:
-      "For the price I paid, I wasn’t expecting such top-notch quality. The attention to detail, like the lining, stitching, and even the tag placement, shows that the brand really cares. It feels like a premium product at a very fair price. Truly exceeded expectations.",
-    rating: 5,
+      "This was my first order and I’m honestly impressed. The fit was spot-on, material felt soft on the skin, and the style was exactly what I wanted. You’ve earned a loyal customer!",
+    rating: 4.8,
     date: "5 days ago",
   },
 ];
+
 
 const ReviewCard = styled(Card)(({ theme }) => ({
   position: "relative",
