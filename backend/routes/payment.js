@@ -6,8 +6,12 @@ const nodemailer = require("nodemailer");
 const { body, validationResult } = require("express-validator");
 const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
+const { requireAuth } = require("../middleware/authMiddleware");
+const FIRST_ORDER_PROMO_CODE = process.env.PROMO_CODE;
 
-// Rate limiting for payment endpoints
+if (!FIRST_ORDER_PROMO_CODE) {
+  console.warn("⚠️ Warning: PROMO_CODE environment variable is not set!");
+}
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests
@@ -275,8 +279,6 @@ router.post("/create-cod-order", paymentLimiter, validateCODOrder, async (req, r
   }
 });
 
-module.exports = router;
-
 // Get orders by user email (or other query params)
 // Example: GET /api/payment/orders?email=user%40example.com
 router.get("/orders", async (req, res) => {
@@ -305,3 +307,93 @@ router.get("/all-orders", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch all orders", error: err.message });
   }
 });
+
+router.get('/first-order-status', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Check if user has any previous completed orders
+    const existingOrders = await Order.find({ 
+      'shippingAddress.email': req.user.email, // Use email from shipping address
+      status: { $nin: ['cancelled', 'failed'] }
+    });
+
+    const isFirstOrder = existingOrders.length === 0;
+
+    res.json({
+      isFirstOrder,
+      message: isFirstOrder 
+        ? 'This is your first order - eligible for welcome discount!' 
+        : 'Welcome back!'
+    });
+
+  } catch (error) {
+    console.error('First order check error:', error);
+    res.status(500).json({ 
+      message: 'Server error checking order status',
+      error: error.message 
+    });
+  }
+});
+
+router.post('/validate-promo', requireAuth, async (req, res) => {
+  try {
+    const { promoCode, subtotal } = req.body;
+
+    // Check if user has any previous completed orders
+    const existingOrders = await Order.find({ 
+      'shippingAddress.email': req.user.email,
+      status: { $nin: ['cancelled', 'failed'] }
+    });
+
+    const isFirstOrder = existingOrders.length === 0;
+
+    // Validate promo code
+    if (!promoCode || typeof promoCode !== 'string') {
+      return res.status(400).json({
+        valid: false,
+        message: 'Please enter a valid promo code'
+      });
+    }
+
+    const cleanedPromoCode = promoCode.trim().toUpperCase();
+
+    // Check for first order promo code
+    if (cleanedPromoCode === "FIRSTSUMANSI") {
+      if (!isFirstOrder) {
+        return res.status(400).json({
+          valid: false,
+          message: 'This promo code is only valid for first-time customers'
+        });
+      }
+
+      // Calculate 10% discount
+      const discountAmount = Math.round(subtotal * 0.1);
+      const discountedTotal = subtotal - discountAmount;
+
+      return res.json({
+        valid: true,
+        promoCode: "FIRSTSUMANSI",
+        discountAmount,
+        discountedTotal,
+        discountPercentage: 10,
+        message: '10% welcome discount applied successfully!'
+      });
+    }
+
+    // Agar koi aur promo code hai toh invalid batao
+    return res.status(400).json({
+      valid: false,
+      message: 'Invalid promo code'
+    });
+
+  } catch (error) {
+    console.error('Promo code validation error:', error);
+    res.status(500).json({ 
+      message: 'Server error validating promo code',
+      error: error.message 
+    });
+  }
+});
+
+module.exports = router;
